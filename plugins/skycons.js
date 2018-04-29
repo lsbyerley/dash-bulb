@@ -1,4 +1,14 @@
 import Vue from 'vue'
-import Skycons from '../skycons'
+import Skycons from './skycons/skycons.js';
+import SkyconComponent from './skycons/Skycon';
 
-Vue.use(Skycons)
+SkyconComponent.install = (Vue, options = {}) => {
+
+  var skycons = new Skycons(options || {});
+  skycons.play();
+
+  Vue.prototype.$skycons = skycons;
+  Vue.component('skycon', SkyconComponent)
+}
+
+Vue.use(SkyconComponent)

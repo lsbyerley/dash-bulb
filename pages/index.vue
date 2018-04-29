@@ -1,26 +1,9 @@
 <template>
 
-  <v-layout align-center justify-center>
-    <v-flex xs12 sm8 md4>
-      <v-card class="elevation-12">
-        <v-toolbar dark color="primary">
-          <v-toolbar-title>Current Weather</v-toolbar-title>
-          <v-spacer></v-spacer>
-        </v-toolbar>
-        <v-card-text>
-          <v-layout row>
-            <v-flex xs6>
-              <v-switch label="Weather" v-model="applyWeather"></v-switch>
-            </v-flex>
-            <v-flex xs6>
-              <p class="display-2">{{ formattedTemp }}</p>
-              <v-icon>fas fa-thermometer-half</v-icon>
-              <Skycon :condition="weatherIcon" />
-            </v-flex>
-          </v-layout>
-        </v-card-text>
-      </v-card>
-      <v-card class="elevation-12">
+  <v-layout justify-space-between>
+
+    <v-flex xs12 sm4 offset-sm1>
+      <v-card class="elevation-12 bulbSettings">
         <v-toolbar dark color="primary">
           <v-toolbar-title>{{ label }}</v-toolbar-title>
           <v-spacer></v-spacer>
@@ -45,19 +28,40 @@
                 <v-slider :min="0" :max="1" :step=".01" label="Saturation" v-model="saturation" :disabled="power==='off'"></v-slider>
               </v-flex>
               <v-flex xs2>
-                <v-text-field class="bulb-setting" v-model="saturation" type="number"></v-text-field>
+                <v-text-field class="bulbInput" v-model="saturation" type="number"></v-text-field>
               </v-flex>
               <v-flex xs10>
                 <v-slider :min="0" :max="1" :step=".01" label="Brightness" v-model="brightness" :disabled="power==='off'"></v-slider>
               </v-flex>
               <v-flex xs2>
-                <v-text-field class="bulb-setting" v-model="brightness" type="number"></v-text-field>
+                <v-text-field class="bulbInput" v-model="brightness" type="number"></v-text-field>
               </v-flex>
             </v-layout>
         </v-card-text>
         <v-card-actions class="justify-center">
           <v-btn v-on:click="updateBulbState" color="primary">Update Bulb</v-btn>
         </v-card-actions>
+      </v-card>
+    </v-flex>
+    <v-flex xs12 sm4>
+      <v-card class="elevation-12 currentWeather">
+        <v-toolbar dark color="primary">
+          <v-toolbar-title>Current Weather</v-toolbar-title>
+          <v-spacer></v-spacer>
+        </v-toolbar>
+        <v-card-text>
+          <v-layout row>
+            <v-flex xs6>
+              <v-switch label="Apply Weather Hue" v-model="applyWeather" v-on:change="setToWeather()"></v-switch>
+            </v-flex>
+            <v-flex xs6 class="currentTemp">
+              <p class="display-2">{{ formattedTemp }}</p>
+              <v-icon>fas fa-thermometer-half</v-icon>
+              <!--<skycon :condition="weatherIcon"></skycon>-->
+              <p>{{ summary }}</p>
+            </v-flex>
+          </v-layout>
+        </v-card-text>
       </v-card>
     </v-flex>
 
@@ -79,13 +83,13 @@
 <script>
 import { mapState, mapActions } from 'vuex'
 import { mapFields } from 'vuex-map-fields'
-import { hsvToRgb } from '@/utils/util'
+import { hsvToRgb, hsv_to_rgb } from '@/utils/util'
 
 export default {
   name: 'Dashboard',
   async fetch ({ store, params }) {
     if (!store.state.bulbStatusLoaded) {
-      await store.dispatch('getBulbStatus')
+      await store.dispatch('getBulbStatus', { firsttime: true })
       await store.dispatch('getCurrentWeather')
     }
   },
@@ -109,6 +113,7 @@ export default {
       'dialog.message',
       'currentWeather.temperature',
       'currentWeather.weatherIcon',
+      'currentWeather.summary',
       'applyWeather'
     ]),
     bulbColorStyle() {
@@ -117,6 +122,10 @@ export default {
       const v = (this.brightness * 100).toFixed(0)
       const rgb = hsvToRgb( [h, s, v] )
       const bgColor = `rgb(${rgb[0].toFixed(0)}, ${rgb[1].toFixed(0)}, ${rgb[2].toFixed(0)})`
+
+      const test = hsv_to_rgb(h, s, v)
+      console.log(test)
+
       return {
         background: bgColor,
         height: '50px'
@@ -127,6 +136,16 @@ export default {
     }
   },
   methods: {
+    setToWeather() {
+      if (this.applyWeather) {
+        let temp = Math.round(this.temperature);
+        // make sure the temp isn't above 100 because that's as high as we can go
+        temp = temp < 100 ? temp : 100;
+        const hue = 200 + (160 * (temp / 100));
+        console.log('weather-hue', hue)
+        this.$store.commit('setBulbToWeather', { hue: hue })
+      }
+    },
     updateBulbState() {
       this.$store.dispatch('updateBulbState')
     },
@@ -159,12 +178,33 @@ export default {
   }
 }
 
-.bulb-setting {
-  padding-top: 3px;
-  text-align: center;
+.card.currentWeather {
+  margin-bottom: 1rem;
 
-  .input-group__input input {
+  .currentTemp {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    p {
+      margin: 0 3px 0 0;
+    }
+  }
+}
+
+.card.bulbSettings {
+
+  .primary--text input {
     text-align: center;
   }
+
+  .bulbInput {
+    padding-top: 3px;
+
+    .input-group__input input {
+      text-align: center;
+    }
+  }
+
 }
 </style>

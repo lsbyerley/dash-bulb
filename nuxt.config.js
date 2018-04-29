@@ -68,7 +68,7 @@ module.exports = {
       if (ctx.isServer) {
         config.externals = [
           nodeExternals({
-            whitelist: [/^vuetify/]
+            whitelist: [/^vuetify/,/^skycons/]
           })
         ]
       }

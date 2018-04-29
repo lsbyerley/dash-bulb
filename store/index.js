@@ -1,17 +1,8 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-//import axios from 'axios'
-//import Lifx from 'lifx-http-api'
-//import DarkSky from 'dark-sky'
 import { getField, updateField } from 'vuex-map-fields'
 
 Vue.use(Vuex)
-
-//const lifxClient = new Lifx({ bearerToken: 'c04e8e6ad71bea9759ad73644699906603aae54fc06cb9ed8345625d1352f194' });
-//const DarkSkyClient = new DarkSky('eb5b0d759acd17f7021f5d0c0108086a')
-
-//let bulbId = 'd073d532af43'
-//bulbId = 'all'
 
 const createStore = () => {
   return new Vuex.Store({
@@ -32,7 +23,8 @@ const createStore = () => {
       bulbStatusLoaded: false,
       currentWeather: {
         temperature: 0,
-        weatherIcon: ''
+        weatherIcon: '',
+        summary: ''
       },
       applyWeather: false,
       dialog: {
@@ -41,18 +33,13 @@ const createStore = () => {
       }
     },
     actions: {
-      async getBulbStatus({ commit }) {
-        /*try {
-          const clientRes = await lifxClient.listLights(bulbId);
-          commit('setBulbStatus', { bulbStatus: clientRes })
-          commit('setBulbStatusLoaded', { bulbStatusLoaded: true })
-        } catch(err) {
-          console.error(err)
-        }*/
+      async getBulbStatus({ commit }, payload) {
+
+        console.log('PAYLOAD', payload.firsttime)
 
         try {
-          //this.$axios.setHeader('bucedup', 'shclient198827')
           const bulbRes = await this.$axios.get('/api/bulb-status')
+          console.log(bulbRes.data[0].color.hue)
           commit('setBulbStatus', { bulbStatus: bulbRes.data })
           commit('setBulbStatusLoaded', { bulbStatusLoaded: true })
         } catch(err) {
@@ -60,15 +47,10 @@ const createStore = () => {
         }
 
       },
-      async updateBulbState({ state, commit }, payload) {
+      async updateBulbState({ state, commit, dispatch }, payload) {
         try {
-          //let temp = Math.round(data.data.currently.temperature);
-          // make sure the temp isn't above 100 because that's as high as we can go
-          //let temp = 78
-          //temp = temp < 100 ? temp : 100;
-          //let hue = 200 + (160 * (temp / 100));
-
           const data = state.bulbStatus
+          console.log('UPDATING TO: ', data.hue)
           const bulbRes = await this.$axios.post('/api/update-bulb', data)
           const status = bulbRes.data.results[0].status
 
@@ -77,6 +59,10 @@ const createStore = () => {
           } else {
             commit('toggleDialog', { active: true, message: 'hmmmm.. something didn\'t work - '+status })
           }
+
+          //commit('setBulbStatusLoaded', { bulbStatusLoaded: false })
+          const newStatus = await dispatch('getBulbStatus', { firsttime: false })
+          console.log('NEW STATUS', newStatus)
 
         } catch(err) {
           console.error(err)
@@ -99,7 +85,6 @@ const createStore = () => {
     mutations: {
       updateField,
       setBulbStatus: (state, { bulbStatus }) => {
-        //console.log(bulbStatus)
         state.bulbStatus.id = bulbStatus[0].id
         state.bulbStatus.label = bulbStatus[0].label
         state.bulbStatus.connected = bulbStatus[0].connected
@@ -115,7 +100,7 @@ const createStore = () => {
         state.bulbStatusLoaded = bulbStatusLoaded
       },
       setWeather: (state, { weather }) => {
-        //console.log(weather.currently)
+        state.currentWeather.summary = weather.currently.summary
         state.currentWeather.temperature = weather.currently.apparentTemperature
         state.currentWeather.weatherIcon = weather.currently.icon
       },
@@ -124,6 +109,12 @@ const createStore = () => {
         if (message) {
           state.dialog.message = message
         }
+      },
+      setBulbToWeather: (state, { hue }) => {
+        state.applyWeather = true
+        state.bulbStatus.hue = hue
+        state.bulbStatus.saturation = 100
+        state.bulbStatus.brightness = 100
       }
     }
   })
